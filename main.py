@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_mysqldb import MySQL
 
 class Contribution:
@@ -50,6 +50,59 @@ class User:
             "image": self.image
         }
 
+class Sentence:
+    id = 0
+    lang = ""
+    text = ""
+    user_id = 0
+    created_at = ""
+    updated_at = ""
+    translations = None
+    
+    def __init__(self, row):
+        self.id = row[0]
+        self.lang = row[1]
+        self.text = row[2]
+        self.user_id = row[4]
+        self.created_at = row[5]
+        self.updated_at = row[6]
+    
+    def dict(self):
+        data = {
+            "id": self.id,
+            "lang": self.lang,
+            "text": self.text.decode("utf-8"),
+            "user_id": self.user_id
+        }
+        
+        if self.created_at is not None:
+            data["created_at"] = self.created_at.isoformat()
+        
+        if self.updated_at is not None:
+            data["updated_at"] = self.updated_at.isoformat()
+        
+        if self.translations is not None:
+            data["translations"] = self.translations
+        
+        return data
+
+class Translation:
+    id = 0
+    sentence_id = 0
+    translation_id = 0
+    
+    def __init__(self, row):
+        self.id = row[0]
+        self.sentence_id = row[1]
+        self.translation_id = row[2]
+    
+    def dict(self):
+        return {
+            "id": self.id,
+            "sentence_id": self.sentence_id,
+            "translation_id": self.translation_id
+        }
+
 app = Flask(__name__)
 sql = MySQL()
 
@@ -73,6 +126,32 @@ def contributions():
         contributions.append(contribution.dict())
     
     return jsonify(contributions)
+
+@app.route("/sentences")
+def sentences():
+    query = request.args.get("q")
+    
+    cursor = sql.connection.cursor()
+    cursor.execute("SELECT * FROM sentences WHERE text LIKE '%" + query + "%' LIMIT 10")
+    result = cursor.fetchall()
+    sentences = []
+    
+    for row in result:
+        sentence = Sentence(row)
+        cursor.execute("SELECT * FROM sentences_translations WHERE sentence_id = %d" % sentence.id)
+        translations_result = cursor.fetchall()
+        translations = []
+        
+        for translation_row in translations_result:
+            translation = Translation(translation_row)
+            cursor.execute("SELECT * FROM sentences WHERE id = %d" % translation.translation_id)
+            translation_sentence = Sentence(cursor.fetchall()[0])
+            translations.append(translation_sentence.dict())
+        
+        sentence.translations = translations
+        sentences.append(sentence.dict())
+    
+    return jsonify(sentences)
 
 if __name__ == "__main__":
     app.run(debug=True)
