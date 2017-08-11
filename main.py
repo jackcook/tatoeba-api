@@ -130,9 +130,19 @@ def contributions():
 @app.route("/sentences")
 def sentences():
     query = request.args.get("q")
+    offset = request.args.get("offset")
+    
+    offset_num = 0
+    
+    try:
+        offset_num = int(offset)
+    except:
+        offset_num = 0
+    
+    print(offset_num)
     
     cursor = sql.connection.cursor()
-    cursor.execute("SELECT * FROM sentences WHERE text LIKE '%" + query + "%' LIMIT 10")
+    cursor.execute("SELECT * FROM sentences WHERE text LIKE '%" + query + "%' LIMIT 10 OFFSET " + str(offset_num))
     result = cursor.fetchall()
     sentences = []
     
