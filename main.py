@@ -131,6 +131,7 @@ def contributions():
 def sentences():
     query = request.args.get("q")
     offset = request.args.get("offset")
+    from_lang = request.args.get("from")
     
     offset_num = 0
     
@@ -138,11 +139,14 @@ def sentences():
         offset_num = int(offset)
     except:
         offset_num = 0
+        
+    where_languages = ""
     
-    print(offset_num)
+    if from_lang is not None:
+        where_languages = " AND lang = '" + from_lang + "'"
     
     cursor = sql.connection.cursor()
-    cursor.execute("SELECT * FROM sentences WHERE text LIKE '%" + query + "%' LIMIT 10 OFFSET " + str(offset_num))
+    cursor.execute("SELECT * FROM sentences WHERE text LIKE '%" + query + "%'" + where_languages + " LIMIT 10 OFFSET " + str(offset_num))
     result = cursor.fetchall()
     sentences = []
     
